@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import gsap from "gsap";
 import * as THREE from "three";
 
+import { useGlobeStage } from "@/components/globe-stage/globe-stage-context";
 import { useIsomorphicLayoutEffect } from "@/lib/use-isomorphic-layout-effect";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { OrbitNode } from "./OrbitNode";
@@ -120,10 +122,44 @@ function OrbitRing({ orbit, color }: { orbit: Orbit; color: string }) {
  * Hero-only dressing: thin rings sweeping around the globe, each carrying a few
  * glowing nodes. Rendered as a sibling of `<Globe />` rather than a child, so
  * the reusable globe stays free of section-specific decoration.
+ *
+ * The rings travel with the globe but belong to the hero, so they fade out as
+ * it leaves — later sections bring their own dressing.
  */
 export function OrbitRings({ color = "#b7c0d8" }: { color?: string }) {
+  const group = useRef<THREE.Group>(null);
+  const stage = useGlobeStage();
+  const baseOpacity = useRef(new WeakMap<THREE.Material, number>());
+
+  useFrame(() => {
+    const root = group.current;
+    if (!root || !stage) return;
+
+    const fade = 1 - stage.progress.current;
+    root.visible = fade > 0.01;
+    if (!root.visible) return;
+
+    root.traverse((object) => {
+      const material = (object as THREE.Mesh).material as
+        | THREE.Material
+        | undefined;
+      if (!material || Array.isArray(material)) return;
+
+      // Record each material's authored opacity once, then scale from it —
+      // reading the live value would compound the fade every frame.
+      let base = baseOpacity.current.get(material);
+      if (base === undefined) {
+        base = material.opacity;
+        baseOpacity.current.set(material, base);
+      }
+
+      material.transparent = true;
+      material.opacity = base * fade;
+    });
+  });
+
   return (
-    <group>
+    <group ref={group}>
       {ORBITS.map((orbit) => (
         <OrbitRing key={orbit.radius} orbit={orbit} color={color} />
       ))}

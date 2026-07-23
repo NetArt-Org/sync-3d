@@ -1,20 +1,14 @@
 "use client";
 
 import { useRef } from "react";
-import dynamic from "next/dynamic";
 import gsap from "gsap";
 import { ArrowUpRight, Play } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { GlobeAnchor } from "@/components/globe-stage/GlobeAnchor";
 import { useIsomorphicLayoutEffect } from "@/lib/use-isomorphic-layout-effect";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { HeroConnectors } from "./HeroConnectors";
 import { HeroLabels } from "./HeroLabels";
-
-// WebGL has nothing useful to contribute to the server render, and skipping it
-// keeps three.js out of the initial payload. The copy still renders on the
-// server, so the hero is meaningful before the scene arrives.
-const HeroScene = dynamic(() => import("./HeroScene"), { ssr: false });
 
 export function Hero() {
   const root = useRef<HTMLElement>(null);
@@ -41,8 +35,8 @@ export function Hero() {
           { y: 16, autoAlpha: 0, stagger: 0.1, duration: 0.7 },
           "-=0.55",
         )
-        // The scene runs alongside the copy rather than after it, so the hero
-        // reads as one entrance instead of two.
+        // The globe runs its own entrance from `<GlobeStage />` on the same
+        // clock, so the hero still reads as one arrival rather than two.
         .from(
           ".hero-connector",
           { strokeDashoffset: 1, duration: 0.9, stagger: 0.07, ease: "power2.inOut" },
@@ -72,7 +66,8 @@ export function Hero() {
   return (
     <section
       ref={root}
-      className="relative w-full overflow-hidden bg-white"
+      // Transparent: the shared globe layer sits behind the sections.
+      className="relative z-10 w-full overflow-hidden"
       aria-labelledby="hero-heading"
     >
       <div className="mx-auto grid w-full max-w-[1512px] grid-cols-1 items-center gap-y-4 px-6 pt-16 pb-20 sm:px-10 lg:min-h-[min(100svh,900px)] lg:grid-cols-[minmax(0,34fr)_minmax(0,66fr)] lg:gap-6 lg:py-0 lg:pr-[3vw] lg:pl-[5.4vw]">
@@ -115,20 +110,12 @@ export function Hero() {
         </div>
 
         <div className="@container relative mx-auto aspect-square w-full max-w-[520px] md:max-w-[600px] lg:max-w-none">
-          {/* Soft contact shadow. Offset so a crescent stays visible past the
-              opaque shell rather than being hidden behind it. */}
-          <div
-            aria-hidden="true"
-            className="hero-canvas absolute top-[24%] left-[21%] size-[62%] rounded-full blur-[26px]"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(23,32,74,0.14) 52%, rgba(23,32,74,0) 74%)",
-            }}
-          />
-
-          <div className="hero-canvas absolute inset-0">
-            <HeroScene />
-          </div>
+          {/*
+            Where the shared globe sits while the hero is on screen. The inset
+            makes the globe 61.2% of the stage, which is the proportion the
+            connector coordinates in `hero-labels.ts` are drawn against.
+          */}
+          <GlobeAnchor id="hero" className="absolute inset-[19.4%]" />
 
           <HeroConnectors />
           <HeroLabels />

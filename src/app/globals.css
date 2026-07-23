@@ -188,6 +188,15 @@ h1.display span {
   letter-spacing: -0.02em;
 }
 
+/* Section headings: one step below the hero display, reusing the h1 token.
+   The base `h2` step is a UI size and reads far too small at section scale. */
+h2.section-title,
+h2.section-title span {
+  font-size: var(--text-h1);
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+}
+
 /* Standfirst copy. The base `p` rule sets a tight UI line-height; intro
    paragraphs need the extra air. */
 p.lede {
